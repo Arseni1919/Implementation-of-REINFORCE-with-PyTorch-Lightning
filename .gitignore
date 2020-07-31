@@ -1,2 +1,3 @@
 lightning_logs
 example.ckpt
+__pycache__

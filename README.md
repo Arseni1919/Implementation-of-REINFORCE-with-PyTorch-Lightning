@@ -17,3 +17,11 @@ The flow of REINFORCE algorithm is:
 3. Calculate discounted cumulative future reward at each step
 4. Compute policy gradient and update policy parameter
 5. Repeat 1–4
+
+## My Implementation
+
+...
+
+[REINFORCE.py](REINFORCE.py)
+
+...

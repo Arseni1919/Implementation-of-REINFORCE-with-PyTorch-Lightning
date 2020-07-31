@@ -56,8 +56,8 @@ class RLDataset(torch.utils.data.IterableDataset):
 
 
 replay_buffer = ReplayBuffer(1000)
-dataset = RLDataset(replay_buffer, sample_size=48)
-dataloader = DataLoader(dataset=dataset, batch_size=16)
+dataset = RLDataset(replay_buffer, sample_size=12)
+dataloader = DataLoader(dataset=dataset)
 
 env = gym.make("CartPole-v0")
 state = env.reset()
