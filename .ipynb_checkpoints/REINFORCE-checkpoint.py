@@ -56,7 +56,7 @@ class RLDataset(torch.utils.data.IterableDataset):
         rewards = []
         states = []
         actions = []
-        self.model.eval()
+
         for steps in range(max_steps):
             action, log_prob = self.model.select_action(state)
             new_state, reward, done, _ = self.env.step(action)
@@ -67,7 +67,6 @@ class RLDataset(torch.utils.data.IterableDataset):
             state = new_state
             if done:
                 break
-        self.model.train()
         yield rewards, log_probs, states, actions
         # # states, actions, rewards, dones, new_states = self.buffer.sample(self.sample_size)
         # for i in range(len(dones)):
@@ -78,7 +77,7 @@ class RLDataset(torch.utils.data.IterableDataset):
 class REINFORCELightning(pl.LightningModule):
     """ Basic DQN Model """
 
-    def __init__(self, env_name: str = 'CartPole-v1') -> None:
+    def __init__(self, env_name, ) -> None:
         super().__init__()
         # self.hparams = hparams
 
@@ -113,19 +112,21 @@ class REINFORCELightning(pl.LightningModule):
         # print(f'\n[------------] new batch: {nb_batch} ; inside batch: {len(batch[0])}')
         device = self.get_device(batch)
         # rewards, log_probs = batch
-        rewards = torch.cat(batch[0]).numpy()
+        rewards = batch[0]
+        # log_probs = batch[1]
+        states = batch[2]
+        actions = batch[3]
 
-        states = torch.cat(batch[2])
-        actions = torch.cat(batch[3])
-        out = self.forward(states)
-        probs = out.gather(1, actions.unsqueeze(-1)).squeeze(-1)
-        log_probs = torch.log(probs)
+        states = torch.tensor(states)
+        probs = self.forward(Variable(states))
+        log_probs = torch.log(probs.squeeze(0)[actions])
+
 
         discounted_rewards = []
         GAMMA = 0.9
 
         for t in range(len(rewards)):
-            Gt = 0.0
+            Gt = 0
             pw = 0
             for r in rewards[t:]:
                 Gt = Gt + GAMMA ** pw * r
@@ -173,7 +174,7 @@ def main():
     trainer = pl.Trainer(
         # gpus=1,
         # distributed_backend='dp',
-        max_epochs=2000,
+        max_epochs=1000,
         early_stop_callback=False,
         val_check_interval=10
     )
@@ -181,12 +182,12 @@ def main():
     trainer.fit(model)
     trainer.save_checkpoint("example.ckpt")
 
-    # new_model = REINFORCELightning.load_from_checkpoint(checkpoint_path="example.ckpt")
+    new_model = REINFORCELightning.load_from_checkpoint(checkpoint_path="example.ckpt")
     env = gym.make(env_id)
     obs = env.reset()
     for i in range(30000):
 
-        highest_prob_action, log_prob = model.net.select_action(torch.tensor(obs))
+        highest_prob_action, log_prob = REINFORCELightning.net.select_action(torch.tensor(obs))
         # _, action = torch.max(q_values, dim=1)
         # action = int(action.item())
 
