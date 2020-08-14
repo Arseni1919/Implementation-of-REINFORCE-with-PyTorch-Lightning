@@ -1,36 +1,32 @@
 from IMPORTS import *
 
+env_id = 'CartPole-v1'
+GAMMA = 0.9
+learning_rate = 3e-4
+max_epochs = 2000
+val_check_interval = 10
+hidden_dim = 128
+
 
 class Model(nn.Module):
-    def __init__(self, dim_observation, n_actions):
+    def __init__(self, num_inputs, num_actions, hidden_size=hidden_dim, learning_rate=3e-4):
         super(Model, self).__init__()
 
-        self.n_actions = n_actions
-        self.dim_observation = dim_observation
-        self.hidden_dim = 128
-
-        self.net = nn.Sequential(
-            nn.Linear(in_features=self.dim_observation, out_features=self.hidden_dim),
-            nn.ReLU(),
-            nn.Linear(in_features=self.hidden_dim, out_features=self.n_actions),
-            nn.Softmax(dim=1)
-        )
-        self.net.double()
+        self.num_actions = num_actions
+        self.linear1 = nn.Linear(num_inputs, hidden_size)
+        self.linear2 = nn.Linear(hidden_size, num_actions)
+        self.optimizer = optim.Adam(self.parameters(), lr=learning_rate)
 
     def forward(self, state):
-        return self.net(state)
+        x = F.relu(self.linear1(state))
+        x = F.softmax(self.linear2(x), dim=1)
+        return x
 
     def select_action(self, state):
-        # action = torch.multinomial(self.forward(state), 1)
-        # return action
-
-        # state = torch.from_numpy(state).float().unsqueeze(0)
-        # probs = self.forward(Variable(state))
-
-        tnsr = torch.tensor(state, dtype=torch.double)
-        curr_out = self(tnsr)
-        highest_prob_action = np.random.choice(self.n_actions, p=np.squeeze(curr_out.detach().numpy()))
-        log_prob = torch.log(tnsr.squeeze(0)[highest_prob_action])
+        state = torch.from_numpy(state).float().unsqueeze(0)
+        probs = self.forward(Variable(state))
+        highest_prob_action = np.random.choice(self.num_actions, p=np.squeeze(probs.detach().numpy()))
+        log_prob = torch.log(probs.squeeze(0)[highest_prob_action])
         return highest_prob_action, log_prob
 
 
@@ -81,7 +77,7 @@ class REINFORCELightning(pl.LightningModule):
         super().__init__()
         # self.hparams = hparams
 
-        self.env = gym.make(env_name)
+        self.env = gym.make(env_id)
         obs_size = self.env.observation_space.shape[0]
         n_actions = self.env.action_space.n
 
@@ -105,23 +101,23 @@ class REINFORCELightning(pl.LightningModule):
         output = self.net(x)
         return output
 
-    def training_step(self, batch, nb_batch): # : Tuple[torch.Tensor, torch.Tensor]
+    def training_step(self, batch, nb_batch):  # : Tuple[torch.Tensor, torch.Tensor]
         """
 
         """
+
         # print(f'\n[------------] new batch: {nb_batch} ; inside batch: {len(batch[0])}')
         device = self.get_device(batch)
         # rewards, log_probs = batch
         rewards = torch.cat(batch[0]).numpy()
-
+        log_probs = batch[1]
         states = torch.cat(batch[2])
         actions = torch.cat(batch[3])
-        out = self.forward(states)
-        probs = out.gather(1, actions.unsqueeze(-1)).squeeze(-1)
-        log_probs = torch.log(probs)
+        # out = self.forward(states)
+        # probs = out.gather(1, actions.unsqueeze(-1)).squeeze(-1)
+        # log_probs = torch.log(probs)
 
         discounted_rewards = []
-        GAMMA = 0.9
 
         for t in range(len(rewards)):
             Gt = 0.0
@@ -149,7 +145,7 @@ class REINFORCELightning(pl.LightningModule):
 
     def configure_optimizers(self):  # -> List[Optimizer]:
         """ Initialize Adam optimizer"""
-        learning_rate = 3e-4
+
         optimizer = optim.Adam(self.net.parameters(), lr=learning_rate)
         return [optimizer]
 
@@ -163,29 +159,33 @@ class REINFORCELightning(pl.LightningModule):
         """Retrieve device currently being used by minibatch"""
         return batch[0].device.index if self.on_gpu else 'cpu'
 
+
 def main():
-    env_id = 'CartPole-v1'
+    load = True
 
-    model = REINFORCELightning(env_id)
-    print(f'The model we created correspond to:\n{model}')
+    if not load:
+        model = REINFORCELightning(env_id)
+        print(f'The model we created correspond to:\n{model}')
 
-    trainer = pl.Trainer(
-        # gpus=1,
-        # distributed_backend='dp',
-        max_epochs=2000,
-        early_stop_callback=False,
-        val_check_interval=10
-    )
+        trainer = pl.Trainer(
+            # gpus=1,
+            # distributed_backend='dp',
+            max_epochs=max_epochs,
+            early_stop_callback=False,
+            val_check_interval=val_check_interval
+        )
 
-    trainer.fit(model)
-    trainer.save_checkpoint("example.ckpt")
+        trainer.fit(model)
+        trainer.save_checkpoint("example.ckpt")
 
-    # new_model = REINFORCELightning.load_from_checkpoint(checkpoint_path="example.ckpt")
+    else:
+        model = REINFORCELightning.load_from_checkpoint(checkpoint_path="example.ckpt")
     env = gym.make(env_id)
     obs = env.reset()
-    for i in range(30000):
+    games = 0
+    while games < 3:
 
-        highest_prob_action, log_prob = model.net.select_action(torch.tensor(obs))
+        highest_prob_action, log_prob = model.net.select_action(obs)
         # _, action = torch.max(q_values, dim=1)
         # action = int(action.item())
 
@@ -194,9 +194,9 @@ def main():
         # print(rew)
         if done:
             obs = env.reset()
+            games += 1
     env.close()
 
 
 if __name__ == '__main__':
     main()
-
