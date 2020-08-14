@@ -33,5 +33,5 @@ the flow of the game (one epoch at the time)
 - REINFORCELightning(pl.LightningModule) - actual Lightning
 Model that constructs the process of learning
 
-###The graph of total rewards:
+### The graph of total rewards:
 ![pseudo code](graph1.png)
