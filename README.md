@@ -24,8 +24,14 @@ The flow of REINFORCE algorithm is:
 
 ## My Implementation
 
-...
+The main code of the implementation is in 
+[REINFORCE.py](REINFORCE.py).
+There we have 3 objects:
+- Model(nn.Module) - the model itself
+- RLDataset(torch.utils.data.IterableDataset) - the object that creates
+the flow of the game (one epoch at the time)
+- REINFORCELightning(pl.LightningModule) - actual Lightning
+Model that constructs the process of learning
 
-[REINFORCE.py](REINFORCE.py)
-
-...
+###The graph of total rewards:
+![pseudo code](graph1.png)
