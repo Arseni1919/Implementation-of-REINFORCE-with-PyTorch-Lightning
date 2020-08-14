@@ -10,7 +10,6 @@ The links to look at (*great thanks to all these people*):
 - [DRL book - second edition - A2C on a pong game](https://github.com/PacktPublishing/Deep-Reinforcement-Learning-Hands-On-Second-Edition/blob/master/Chapter12/02_pong_a2c.py)
 
 
-
 ## REINFORCE algorithm
 
 ![pseudo code](reinforce_pseudo_code.png)

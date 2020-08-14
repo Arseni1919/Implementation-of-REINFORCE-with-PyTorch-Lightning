@@ -7,14 +7,13 @@ class Model(nn.Module):
 
         self.n_actions = n_actions
         self.dim_observation = dim_observation
+        self.hidden_dim = 128
 
         self.net = nn.Sequential(
-            nn.Linear(in_features=self.dim_observation, out_features=16),
+            nn.Linear(in_features=self.dim_observation, out_features=self.hidden_dim),
             nn.ReLU(),
-            nn.Linear(in_features=16, out_features=8),
-            nn.ReLU(),
-            nn.Linear(in_features=8, out_features=self.n_actions),
-            nn.Softmax(dim=0)
+            nn.Linear(in_features=self.hidden_dim, out_features=self.n_actions),
+            nn.Softmax(dim=1)
         )
         self.net.double()
 

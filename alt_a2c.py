@@ -151,7 +151,7 @@ def main():
 
     env = gym.make("CartPole-v0")
     obs = env.reset()
-    done = False
+    res = 0
     for i in range(30000):
 
         # q_values = new_model.net(torch.tensor([obs]))
@@ -165,9 +165,12 @@ def main():
 
         obs, rew, done, info = env.step(action)
         env.render()
+        res += rew
         # print(rew)
         if done:
             obs = env.reset()
+            print(f'result of the game: {res}')
+            res = 0
     env.close()
 
 if __name__ == '__main__':
